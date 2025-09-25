@@ -1,11 +1,12 @@
 import { Box, Button, Center, Divider, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, Title, Typography } from "@mantine/core"
-import { IconArrowDown, IconArrowsSort, IconArrowUp } from "@tabler/icons-react"
+import { IconArrowsSort, IconArrowUp } from "@tabler/icons-react"
 import { useEffect, useState } from "react"
 import JobModal from "../../components/JobModal"
 import { OrderEnum } from "../../utils/enums"
-import { Entry, Ordering } from "../../utils/types"
 import { clearData, getData, setData } from "../../utils/storage"
+import { Entry, Ordering } from "../../utils/types"
 import { isEntry } from "../../utils/validate"
+import "../../utils/animations.css"
 
 const createHeaders = (data: Entry[]): string[] => {
   const allKeys: string[] = data.flatMap(Object.keys);
@@ -26,7 +27,7 @@ const Jobs = () => {
   const [ordering, setOrdering] = useState<Ordering>({})
   const [currentOrderedHeader, setCurrentOrderedHeader] = useState<string>("")
   const [initialTableRows, setInitialTableRows] = useState<Entry[]>([])
-  const [orderIcon, setOrderIcon] = useState(<IconArrowsSort />)
+  const [orderIcon, setOrderIcon] = useState(<IconArrowsSort/>)
 
   useEffect(() => {
     const dataFromStorage = getData()
@@ -75,7 +76,7 @@ const Jobs = () => {
     switch (ordering[header]) {
       //order from default to ascending
       case OrderEnum.DEFAULT:
-        setOrderIcon(<IconArrowUp />)
+        setOrderIcon(<IconArrowUp className="icon"/>)
         setOrdering(prev => {
           const oldOrdering = { ...prev }
           return { ...oldOrdering, [header]: OrderEnum.ASC }
@@ -87,7 +88,7 @@ const Jobs = () => {
         break;
       //order from ascending to descending
       case OrderEnum.ASC:
-        setOrderIcon(<IconArrowDown />)
+        setOrderIcon(<IconArrowUp className="icon rotate-180" />)
         setOrdering(prev => {
           const oldOrdering = { ...prev }
           return { ...oldOrdering, [header]: OrderEnum.DSC }
