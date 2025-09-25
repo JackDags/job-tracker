@@ -2,7 +2,7 @@ import { Autocomplete, Box, Button, Input, InputWrapper, Modal } from "@mantine/
 import { DatePickerInput } from "@mantine/dates"
 import { useForm } from "@mantine/form"
 import dayjs from "dayjs"
-import { Entry } from "../../utils/interfaces"
+import { Entry } from "../../utils/types"
 import { getData } from "../../utils/storage"
 
 interface Props {

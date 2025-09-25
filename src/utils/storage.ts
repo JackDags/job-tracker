@@ -1,4 +1,4 @@
-import { Entry } from "./interfaces"
+import { Entry } from "./types"
 
 const LOCAL_STORAGE_KEY = "form-data"
 
