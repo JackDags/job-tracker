@@ -7,6 +7,10 @@ export type Entry = {
   date: string,
 }
 
+export type StorageEntry = Entry & {
+  id: number
+}
+
 export type Ordering = {
   [K in keyof Entry]?: OrderEnum
 }
