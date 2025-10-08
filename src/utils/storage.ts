@@ -25,13 +25,13 @@ export const postData = (newData: Entry) => {
   }
 }
 
-export const updateData = (id: number, data: Entry, callback: () => void) => {
+export const updateData = (id: number, data: Entry, callback: (id: number, data: Entry) => void) => {
   const fetchedData = getData()
   if (fetchedData) {
     const updatedData = new Map(fetchedData)
     updatedData.set(id, data)
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(updatedData)))
-    callback()
+    callback(id, data)
   }
 }
 

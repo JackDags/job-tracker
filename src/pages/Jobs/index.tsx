@@ -45,7 +45,18 @@ const Jobs = () => {
   const [editId, setEditId] = useState<number>(-1)
 
   useEffect(() => {
-    handleInit()
+    const dataFromStorage = getData()
+    if (dataFromStorage && dataFromStorage.size > 0) {
+      //headers
+      const dataToArray = getArrayFromMap(dataFromStorage)
+      const headers = createHeaders(dataToArray)
+      setTableHeaders(headers)
+      setOrdering(Object.fromEntries(headers.map(header => [header, OrderEnum.DEFAULT])))
+      setCurrentOrderedHeader(headers[0])
+      //rows
+      setTableRows(dataFromStorage)
+      setInitialTableRows(dataFromStorage)
+    }
   }, [])
 
   useEffect(() => {
@@ -65,26 +76,11 @@ const Jobs = () => {
     }
   }, [newData])
 
-  const handleInit = () => {
-    const dataFromStorage = getData()
-    if (dataFromStorage && dataFromStorage.size > 0) {
-      //headers
-      const dataToArray = getArrayFromMap(dataFromStorage)
-      const headers = createHeaders(dataToArray)
-      setTableHeaders(headers)
-      setOrdering(Object.fromEntries(headers.map(header => [header, OrderEnum.DEFAULT])))
-      setCurrentOrderedHeader(headers[0])
-      //rows
-      setTableRows(dataFromStorage)
-      setInitialTableRows(dataFromStorage)
-    }
-  }
-
   const handleSubmit = (id: number, data: Entry, reset: () => void) => {
     if (data) {
       setIsOpen(false)
       if (mode === ModeEnum.EDIT) {
-        updateData(id, data, handleInit)
+        updateData(id, data, handleUpdate)
         setRowToEdit(null)
       } else if (mode === ModeEnum.CREATE) {
         setNewData(data)
@@ -157,6 +153,16 @@ const Jobs = () => {
   const handleCreate = () => {
     setIsOpen(true)
     setMode(ModeEnum.CREATE)
+  }
+
+  const handleUpdate = (id: number, data: Entry) => {
+    const updatedData = getData()
+    setTableRows(prev => {
+      const newTableRows = new Map(prev)
+      newTableRows.set(id, data)
+      return newTableRows
+    })
+    setInitialTableRows(updatedData)
   }
 
   return (
