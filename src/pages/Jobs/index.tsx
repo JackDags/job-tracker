@@ -1,15 +1,16 @@
 import { ActionIcon, Box, Button, Center, Checkbox, Divider, Table, TableTbody, TableTd, TableTh, TableThead, TableTr, Title, Typography } from "@mantine/core"
 import { IconArrowsSort, IconArrowUp, IconEdit } from "@tabler/icons-react"
+import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 import JobModal from "../../components/JobModal"
 import "../../utils/animations.css"
 import { ModeEnum, OrderEnum } from "../../utils/enums"
+import { getArrayFromMap } from "../../utils/functions"
 import { clearData, getData, postData, updateData } from "../../utils/storage"
 import { Entry, Ordering } from "../../utils/types"
 import { isEntry } from "../../utils/validate"
-import dayjs from "dayjs"
 
-const createHeaders = (data: Entry[]): string[] => {
+const createHeaders = (data: Entry[]) => {
   const allKeys: string[] = data.flatMap(Object.keys);
   const keySet = new Set(allKeys)
   return Array.from(keySet);
@@ -33,25 +34,18 @@ const Jobs = () => {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [newData, setNewData] = useState<Entry | null>(null)
   const [tableHeaders, setTableHeaders] = useState<string[]>([])
-  const [tableRows, setTableRows] = useState<Entry[]>([])
+  const [tableRows, setTableRows] = useState<Map<number, Entry>>(new Map())
+  const [initialTableRows, setInitialTableRows] = useState<Map<number, Entry>>(new Map())
   const [ordering, setOrdering] = useState<Ordering>({})
   const [currentOrderedHeader, setCurrentOrderedHeader] = useState<string>("")
-  const [initialTableRows, setInitialTableRows] = useState<Entry[]>([])
   const [orderIcon, setOrderIcon] = useState(<IconArrowsSort />)
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [rowToEdit, setRowToEdit] = useState<Entry | null>(null)
   const [mode, setMode] = useState<string>(ModeEnum.CREATE)
+  const [editId, setEditId] = useState<number>(-1)
 
   useEffect(() => {
-    const dataFromStorage = getData()
-    if (dataFromStorage && dataFromStorage.length > 0) {
-      const headers = createHeaders(dataFromStorage)
-      setTableHeaders(headers)
-      setTableRows(dataFromStorage)
-      setInitialTableRows(dataFromStorage)
-      setOrdering(Object.fromEntries(headers.map(header => [header, OrderEnum.DEFAULT])))
-      setCurrentOrderedHeader(headers[0])
-    }
+    handleInit()
   }, [])
 
   useEffect(() => {
@@ -59,19 +53,38 @@ const Jobs = () => {
       postData(newData)
       const newHeaders = createHeaders([newData])
       setTableHeaders(newHeaders)
-      if (tableRows.length === 0) {
+      if (tableRows.size === 0) {
         setOrdering(Object.fromEntries(newHeaders.map(header => [header, OrderEnum.DEFAULT])))
       }
-      setTableRows(prev => [...prev, ...[newData]])
-      setInitialTableRows(prev => [...prev, ...[newData]])
+      setTableRows(prev => {
+        const newTableRows = new Map(prev)
+        newTableRows.set(prev.size, newData)
+        return newTableRows
+      })
+      setInitialTableRows(tableRows)
     }
   }, [newData])
 
-  const handleSubmit = (data: Entry, reset: () => void) => {
+  const handleInit = () => {
+    const dataFromStorage = getData()
+    if (dataFromStorage && dataFromStorage.size > 0) {
+      //headers
+      const dataToArray = getArrayFromMap(dataFromStorage)
+      const headers = createHeaders(dataToArray)
+      setTableHeaders(headers)
+      setOrdering(Object.fromEntries(headers.map(header => [header, OrderEnum.DEFAULT])))
+      setCurrentOrderedHeader(headers[0])
+      //rows
+      setTableRows(dataFromStorage)
+      setInitialTableRows(dataFromStorage)
+    }
+  }
+
+  const handleSubmit = (id: number, data: Entry, reset: () => void) => {
     if (data) {
       setIsOpen(false)
       if (mode === ModeEnum.EDIT) {
-        updateData(data)
+        updateData(id, data, handleInit)
         setRowToEdit(null)
       } else if (mode === ModeEnum.CREATE) {
         setNewData(data)
@@ -83,8 +96,9 @@ const Jobs = () => {
   const handleClear = () => {
     clearData()
     setTableHeaders([])
-    setTableRows([])
+    setTableRows(new Map())
     setRowToEdit(null)
+    setEditId(-1)
   }
 
   const handleOrdering = (header: keyof Entry) => {
@@ -100,8 +114,10 @@ const Jobs = () => {
           return { ...oldOrdering, [header]: OrderEnum.ASC }
         })
         setTableRows(prev => {
-          const oldRows = [...prev]
-          return oldRows.sort((a: Entry, b: Entry) => a[header].localeCompare(b[header]))
+          const sortedRows = new Map(
+            [...prev.entries()].sort(([, a], [, b]) => b[header].localeCompare(a[header]))
+          )
+          return sortedRows
         })
         break;
       //order from ascending to descending
@@ -112,8 +128,10 @@ const Jobs = () => {
           return { ...oldOrdering, [header]: OrderEnum.DSC }
         })
         setTableRows(prev => {
-          const oldRows = [...prev]
-          return oldRows.sort((a: Entry, b: Entry) => b[header].localeCompare(a[header]))
+          const sortedRows = new Map(
+            [...prev.entries()].sort(([, a], [, b]) => a[header].localeCompare(b[header]))
+          )
+          return sortedRows
         })
         break;
       //order from descending to default
@@ -129,7 +147,8 @@ const Jobs = () => {
 
   }
 
-  const handleEdit = (row: Entry) => {
+  const handleEdit = (key: number, row: Entry) => {
+    setEditId(key)
     setRowToEdit(row)
     setIsOpen(true)
     setMode(ModeEnum.EDIT)
@@ -143,6 +162,7 @@ const Jobs = () => {
   return (
     <Center>
       <JobModal
+        id={editId}
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         handleSubmit={handleSubmit}
@@ -166,7 +186,7 @@ const Jobs = () => {
         <Divider my="sm" />
         <Title order={3}>JOBS:</Title>
         {
-          Object.keys(tableRows).length > 0 ?
+          tableRows.size > 0 ?
             <Table.ScrollContainer minWidth={500} maxHeight={600}>
               <Table striped highlightOnHover withColumnBorders withTableBorder horizontalSpacing="md">
                 <TableThead>
@@ -188,32 +208,32 @@ const Jobs = () => {
                   </TableTr>
                 </TableThead>
                 <TableTbody>
-                  {tableRows.map((row) =>
+                  {[...tableRows.entries()].map(([key, value]) =>
                     <TableTr
-                      key={row.company}
-                      bg={selectedRows.includes(row.company) ? 'var(--mantine-color-blue-light)' : undefined}
+                      key={key}
+                      bg={selectedRows.includes(value.company) ? 'var(--mantine-color-blue-light)' : undefined}
                     >
                       <TableTd>
                         <Checkbox
                           aria-label="Select row"
-                          checked={selectedRows.includes(row.company)}
+                          checked={selectedRows.includes(value.company)}
                           styles={{
                             input: { cursor: "pointer" },
                           }}
                           onChange={(event) =>
                             setSelectedRows(
                               event.currentTarget.checked
-                                ? [...selectedRows, row.company]
-                                : selectedRows.filter((position) => position !== row.company)
+                                ? [...selectedRows, value.company]
+                                : selectedRows.filter((position) => position !== value.company)
                             )
                           }
                         />
                       </TableTd>
-                      {Object.values(row).map((entry, index) =>
-                        <TableTd key={`${Object.keys(row)[index]} ${entry}`}>{entry}</TableTd>
+                      {Object.values(value).map((entry, index) =>
+                        <TableTd key={`${Object.keys(value)[index]} ${entry}`}>{entry}</TableTd>
                       )}
                       <TableTd>
-                        <ActionIcon onClick={() => handleEdit(row)}>
+                        <ActionIcon onClick={() => handleEdit(key, value)}>
                           <IconEdit />
                         </ActionIcon>
                       </TableTd>

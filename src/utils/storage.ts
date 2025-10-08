@@ -2,22 +2,22 @@ import { Entry } from "./types"
 
 const LOCAL_STORAGE_KEY = "form-data"
 
-export const getData = () => {
+export const getData = (): Map<number, Entry> => {
   const fetchedData = localStorage.getItem(LOCAL_STORAGE_KEY)
   if (fetchedData) {
-    const parsedData = new Map(JSON.parse(fetchedData))
+    const parsedData: Map<number, Entry> = new Map(JSON.parse(fetchedData))
     return parsedData
+  } else {
+    return new Map()
   }
 }
 
 export const postData = (newData: Entry) => {
-  const fetchedData = localStorage.getItem(LOCAL_STORAGE_KEY)
-  if (fetchedData) {
-    const parsedData = new Map(JSON.parse(fetchedData))
-    // const newDataWithId = {...newData, id: fetchedData.length}
-    // const mergedData = [...parsedData, newDataWithId]
-    const mergedData = [...parsedData, newData]
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(mergedData))
+  const fetchedData = getData()
+  if (fetchedData.size !== 0) {
+    const copyOfFetchedData = new Map(fetchedData)
+    copyOfFetchedData.set(fetchedData.size, newData)
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(copyOfFetchedData)))
   } else {
     const jobMap = new Map()
     jobMap.set(0, newData)
@@ -25,21 +25,13 @@ export const postData = (newData: Entry) => {
   }
 }
 
-export const updateData = (data: Entry) => {
-  const fetchedData = localStorage.getItem(LOCAL_STORAGE_KEY)
+export const updateData = (id: number, data: Entry, callback: () => void) => {
+  const fetchedData = getData()
   if (fetchedData) {
-    const parsedData = JSON.parse(fetchedData)
-    const indexToUpdate = parsedData.findIndex((entry: Entry) => entry.company === data.company)
-
-    if (indexToUpdate >= 0) {
-      const updatedData = [
-        ...parsedData.slice(0, indexToUpdate),
-        { ...data },
-        ...parsedData.slice(indexToUpdate + 1)
-      ]
-      console.log(updatedData)
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedData))
-    }
+    const updatedData = new Map(fetchedData)
+    updatedData.set(id, data)
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.from(updatedData)))
+    callback()
   }
 }
 

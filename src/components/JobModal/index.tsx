@@ -2,31 +2,26 @@ import { Autocomplete, Box, Button, Input, InputWrapper, Modal } from "@mantine/
 import { DatePickerInput } from "@mantine/dates"
 import { useForm } from "@mantine/form"
 import dayjs from "dayjs"
-import { Entry } from "../../utils/types"
-import { getData } from "../../utils/storage"
 import { useEffect, useState } from "react"
-import { isEntry } from "../../utils/validate"
 import { ModeEnum } from "../../utils/enums"
+import { getData } from "../../utils/storage"
+import { Entry } from "../../utils/types"
+import { isEntry } from "../../utils/validate"
+import { getArrayFromMap } from "../../utils/functions"
 
 interface Props {
+  id: number,
   isOpen: boolean
   onClose: () => void
-  handleSubmit: (data: Entry, reset: () => void) => void
+  handleSubmit: (id: number, data: Entry, reset: () => void) => void
   initialValues: Entry
   mode: string
 }
 
-const checkIfDuplicate = <K, V extends Record<string, any>> (subValue: string, key: keyof V): boolean => {
-  const prevData = getData() as  Map<K, V> | null
-
-  if (!prevData) return false
-
-  for (const [, value] of prevData) {
-    if (value[key] === subValue) {
-      return true
-    }
-  }
-  return false
+const checkIfDuplicate = (value: string, key: keyof Entry): boolean => {
+  const dataFromStorage = getData()
+  const dataMappedToArray = getArrayFromMap(dataFromStorage)
+  return dataMappedToArray.some(entry => entry[key] === value);
 }
 
 const statusOptions = [
@@ -38,7 +33,7 @@ const statusOptions = [
 
 const JobModal = (props: Props) => {
 
-  const { isOpen, onClose, handleSubmit, initialValues, mode } = props
+  const { id, isOpen, onClose, handleSubmit, initialValues, mode } = props
 
   const [buttonLabel, setButtonLabel] = useState<string>("")
 
@@ -70,7 +65,7 @@ const JobModal = (props: Props) => {
 
   return (
     <Modal title="Create Job" opened={isOpen} onClose={onClose}>
-      <form onSubmit={form.onSubmit((data) => handleSubmit(data, () => form.reset()))}>
+      <form onSubmit={form.onSubmit((data) => handleSubmit(id, data, () => form.reset()))}>
         <InputWrapper label="Company">
           <Input
             placeholder="Company"
