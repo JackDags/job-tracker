@@ -2,18 +2,26 @@ import { Autocomplete, Box, Button, Input, InputWrapper, Modal } from "@mantine/
 import { DatePickerInput } from "@mantine/dates"
 import { useForm } from "@mantine/form"
 import dayjs from "dayjs"
-import { Entry } from "../../utils/types"
+import { useEffect, useState } from "react"
+import { ModeEnum } from "../../utils/enums"
 import { getData } from "../../utils/storage"
+import { Entry } from "../../utils/types"
+import { isEntry } from "../../utils/validate"
+import { getArrayFromMap } from "../../utils/functions"
 
 interface Props {
-  isOpen: boolean,
+  id: number,
+  isOpen: boolean
   onClose: () => void
-  handleSubmit: (data: Entry, reset: () => void) => void
+  handleSubmit: (id: number, data: Entry, reset: () => void) => void
+  initialValues: Entry
+  mode: string
 }
 
-const checkIfDuplicate = (value: string) => {
-  const prevData = getData()
-  return prevData && prevData.some((entry: Entry) => entry.company === value)
+const checkIfDuplicate = (value: string, key: keyof Entry): boolean => {
+  const dataFromStorage = getData()
+  const dataMappedToArray = getArrayFromMap(dataFromStorage)
+  return dataMappedToArray.some(entry => entry[key] === value);
 }
 
 const statusOptions = [
@@ -25,19 +33,28 @@ const statusOptions = [
 
 const JobModal = (props: Props) => {
 
-  const { isOpen, onClose, handleSubmit } = props
+  const { id, isOpen, onClose, handleSubmit, initialValues, mode } = props
+
+  const [buttonLabel, setButtonLabel] = useState<string>("")
+
+  useEffect(() => {
+    if (isEntry(initialValues)) {
+      form.setValues(initialValues)
+    }
+  }, [initialValues])
+
+  useEffect(() => {
+    if (mode === ModeEnum.CREATE) {
+      setButtonLabel("Submit")
+    } else {
+      setButtonLabel("Update")
+    }
+  }, [mode])
 
   const form = useForm({
-    mode: 'uncontrolled',
-    initialValues:
-    {
-      company: "",
-      position: "",
-      status: "",
-      date: dayjs().format('YYYY-MM-DD'),
-    },
+    initialValues,
     validate: {
-      company: (value) => (value.length && !checkIfDuplicate(value) ? null : "Company already exists"),
+      company: (value) => (value.length > 0 && (!checkIfDuplicate(value, "company") || mode === ModeEnum.EDIT) ? null : "Company already exists"),
       position: (value) => (value.length > 0 ? null : "Position is required"),
       status: (value) => (value.length > 0 && statusOptions.includes(value) ? null : "Status must be one of the listed options"),
       date: (value) => (value.length > 0 && dayjs(value).isValid() ? null : "Date must be valid")
@@ -48,7 +65,7 @@ const JobModal = (props: Props) => {
 
   return (
     <Modal title="Create Job" opened={isOpen} onClose={onClose}>
-      <form onSubmit={form.onSubmit((data) => handleSubmit(data, () => form.reset()))}>
+      <form onSubmit={form.onSubmit((data) => handleSubmit(id, data, () => form.reset()))}>
         <InputWrapper label="Company">
           <Input
             placeholder="Company"
@@ -76,7 +93,7 @@ const JobModal = (props: Props) => {
           {...form.getInputProps('date')}
         />
         <Box pt={24} style={{ display: "flex", justifyContent: "end" }}>
-          <Button type="submit">Submit</Button>
+          <Button type="submit">{buttonLabel}</Button>
         </Box>
       </form>
     </Modal>
